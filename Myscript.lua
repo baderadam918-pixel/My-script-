@@ -1,4 +1,3 @@
-
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -33,6 +32,7 @@ tag.Parent = LocalPlayer
 local HUDScreen = Instance.new("ScreenGui", CoreGui)
 HUDScreen.Name = "A1_HUD"
 HUDScreen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+HUDScreen.ResetOnSpawn = false
 
 -- [[ PROTECTED USERS ]] --
 local PROTECTED_USERS = { "Blaalgwiq1", "Boly14_5" }
@@ -486,23 +486,37 @@ local function startUnwalk()
 end
 startUnwalk()
 
--- [[ SPEED INDICATOR ]] --
+-- ============================================================
+-- [[ FIXED SPEED INDICATOR - BIG RED & REAL SPEED ]] --
+-- ============================================================
 local speedBillboard = Instance.new("BillboardGui")
 speedBillboard.Name = "A1_SpeedDisplay"
-speedBillboard.Size = UDim2.new(0, 90, 0, 26)
-speedBillboard.StudsOffset = Vector3.new(0, 3.5, 0)
-speedBillboard.AlwaysOnTop = false
+speedBillboard.Size = UDim2.new(0, 140, 0, 45)
+speedBillboard.StudsOffset = Vector3.new(0, 5, 0)
+speedBillboard.AlwaysOnTop = true
 speedBillboard.ResetOnSpawn = false
 
 local speedLabel = Instance.new("TextLabel", speedBillboard)
 speedLabel.Size = UDim2.new(1, 0, 1, 0)
 speedLabel.BackgroundTransparency = 1
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+speedLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
 speedLabel.Font = Enum.Font.GothamBold
-speedLabel.TextSize = 20
-speedLabel.Text = "0 sp"
-speedLabel.TextStrokeTransparency = 0.3
+speedLabel.TextSize = 32
+speedLabel.Text = "0 SP"
+speedLabel.TextStrokeTransparency = 0
 speedLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+speedLabel.TextScaled = true
+
+-- Add pulsing effect
+local speedPulse = 0
+game:GetService("RunService").Heartbeat:Connect(function(dt)
+    if speedBillboard and speedBillboard.Parent then
+        speedPulse = speedPulse + dt
+        local pulse = math.sin(speedPulse * 3) * 0.2 + 0.8
+        speedLabel.TextTransparency = 0.1
+        speedLabel.TextStrokeTransparency = 0.1
+    end
+end)
 
 local function attachSpeedDisplay()
     local char = LocalPlayer.Character
@@ -520,7 +534,9 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 attachSpeedDisplay()
 
--- [[ A1 TAG ]] --
+-- ============================================================
+-- [[ FIXED A1 TAG - BIG RED ]] --
+-- ============================================================
 local trackedTags = {}
 
 local function addTagToPlayer(p)
@@ -530,23 +546,40 @@ local function addTagToPlayer(p)
         if not char then return end
         local head = char:FindFirstChild("Head")
         if not head then return end
+
         local bb = Instance.new("BillboardGui")
         bb.Name = "A1_Tag"
-        bb.Size = UDim2.new(0, 140, 0, 26)
-        bb.StudsOffset = Vector3.new(0, 2.5, 0)
-        bb.AlwaysOnTop = false
+        bb.Size = UDim2.new(0, 180, 0, 50)
+        bb.StudsOffset = Vector3.new(0, 4, 0)
+        bb.AlwaysOnTop = true
         bb.ResetOnSpawn = false
         bb.Adornee = head
         bb.Parent = CoreGui
+
         local lbl = Instance.new("TextLabel", bb)
         lbl.Size = UDim2.new(1, 0, 1, 0)
         lbl.BackgroundTransparency = 1
-        lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        lbl.TextColor3 = Color3.fromRGB(255, 30, 30)
         lbl.Font = Enum.Font.GothamBold
-        lbl.TextSize = 14
-        lbl.Text = "using a1 hub"
-        lbl.TextStrokeTransparency = 0.3
+        lbl.TextSize = 28
+        lbl.Text = "⚡ A1 HUB ⚡"
+        lbl.TextStrokeTransparency = 0
         lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+        lbl.TextScaled = true
+
+        local tagPulse = 0
+        local connection
+        connection = game:GetService("RunService").Heartbeat:Connect(function(dt)
+            if not bb or not bb.Parent then
+                connection:Disconnect()
+                return
+            end
+            tagPulse = tagPulse + dt
+            local pulse = math.sin(tagPulse * 4) * 0.15 + 0.85
+            lbl.TextTransparency = 0.1
+            lbl.TextStrokeTransparency = 0.1
+        end)
+
         trackedTags[p] = bb
     end
     tryBuild()
@@ -563,7 +596,9 @@ end
 
 Players.PlayerAdded:Connect(function(p)
     p.ChildAdded:Connect(function(child)
-        if child.Name == "A1_USER" then addTagToPlayer(p) end
+        if child.Name == "A1_USER" then 
+            addTagToPlayer(p) 
+        end
     end)
     p.ChildRemoved:Connect(function(child)
         if child.Name == "A1_USER" and trackedTags[p] then
@@ -739,9 +774,9 @@ local AutoGrabHUD, setAutoGrabState = MakeHUDButton("AutoGrab", "AUTO GRAB", fun
 end)
 
 local SpeedHUD, setSpeedState = MakeHUDButton("Speed", "SPEED", function(on)
-    SETTINGS.SPEED_ENABLED = on  -- fixed: respect the toggle now
+    SETTINGS.SPEED_ENABLED = on
 end)
-setSpeedState(true)  -- default on
+setSpeedState(true)
 
 local LockHUD, setLockState = MakeHUDButton("Lock", "LOCK ON", function(on)
     SETTINGS.LOCK_ENABLED = on
@@ -1218,7 +1253,9 @@ if not tpSide then
     showTpPicker() 
 end
 
--- [[ MAIN LOOP ]] --
+-- ============================================================
+-- [[ MAIN LOOP - FIXED REAL SPEED ]] --
+-- ============================================================
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
@@ -1227,7 +1264,20 @@ RunService.Heartbeat:Connect(function()
     if not hrp or not hum then return end
 
     circlePart.Position = hrp.Position
-    speedLabel.Text = math.floor(hrp.AssemblyLinearVelocity.Magnitude) .. " sp"
+
+    -- FIXED: REAL SPEED CALCULATION
+    local velocity = hrp.Velocity
+    local speed = math.floor(velocity.Magnitude + 0.5)  -- Proper rounding
+    speedLabel.Text = speed .. " SP"
+
+    -- Color changes based on REAL speed
+    if speed > 100 then
+        speedLabel.TextColor3 = Color3.fromRGB(255, 0, 0)  -- Bright red for fast
+    elseif speed > 50 then
+        speedLabel.TextColor3 = Color3.fromRGB(255, 80, 80)  -- Medium red
+    else
+        speedLabel.TextColor3 = Color3.fromRGB(255, 150, 150)  -- Light red for slow
+    end
 
     if SETTINGS.AUTOLEFT and SETTINGS.AUTORIGHT then
         SETTINGS.AUTORIGHT = false
@@ -1241,9 +1291,9 @@ RunService.Heartbeat:Connect(function()
             local fullDir = torso.Position - hrp.Position
             if fullDir.Magnitude > 1.5 then
                 local dirUnit = fullDir.Unit
-                hrp.AssemblyLinearVelocity = Vector3.new(dirUnit.X * SETTINGS.LOCK_SPEED, dirUnit.Y * SETTINGS.LOCK_SPEED, dirUnit.Z * SETTINGS.LOCK_SPEED)
+                hrp.Velocity = Vector3.new(dirUnit.X * SETTINGS.LOCK_SPEED, dirUnit.Y * SETTINGS.LOCK_SPEED, dirUnit.Z * SETTINGS.LOCK_SPEED)
             else
-                hrp.AssemblyLinearVelocity = target.AssemblyLinearVelocity
+                hrp.Velocity = target.Velocity
             end
         end
     elseif SETTINGS.SPEED_ENABLED then
@@ -1270,11 +1320,12 @@ RunService.Heartbeat:Connect(function()
         if nearestPrompt then startStealLoop(nearestPrompt) end
     end
 
+    -- [[ FLOAT SECTION ]] --
     if SETTINGS.FLOAT then
         if not floatPart then
             floatPart = Instance.new("Part", workspace)
-            floatPart.Transparency = 6.5
-            folatpart.cancallie = false
+            floatPart.Transparency = 0.65
+            floatPart.CanCollide = false
             floatPart.Anchored = true
             floatPart.Size = Vector3.new(6, 1, 6)
             floatHeight = hrp.Position.Y - 3.1
@@ -1285,6 +1336,7 @@ RunService.Heartbeat:Connect(function()
         floatPart = nil
     end
 
+    -- [[ AUTO LEFT/RIGHT SECTION ]] --
     local moveActive = SETTINGS.AUTOLEFT and "Left" or (SETTINGS.AUTORIGHT and "Right" or nil)
     if moveActive then
         local phase   = moveActive == "Left" and LeftPhase or RightPhase
@@ -1293,7 +1345,7 @@ RunService.Heartbeat:Connect(function()
         local pReturn = moveActive == "Left" and L_POS_RETURN or R_POS_RETURN
         local pFinal  = moveActive == "Left" and L_POS_FINAL or R_POS_FINAL
 
-        local speed = (phase >= 3) and SETTINGS.STEAL_SPEED or 61
+        local speed = (phase >= 3) and SETTINGS.STEAL_SPEED or SETTINGS.TARGET_SPEED
         local target = nil
         if phase == 1 then target = p1
         elseif phase == 2 then target = pEnd
@@ -1324,7 +1376,7 @@ RunService.Heartbeat:Connect(function()
             end
         else
             local dir = (target - hrp.Position).Unit
-            hrp.AssemblyLinearVelocity = Vector3.new(dir.X * speed, hrp.AssemblyLinearVelocity.Y, dir.Z * speed)
+            hrp.Velocity = Vector3.new(dir.X * speed, hrp.Velocity.Y, dir.Z * speed)
         end
     end
 end)
